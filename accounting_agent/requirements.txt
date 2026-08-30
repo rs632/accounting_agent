@@ -1,0 +1,28 @@
+# Agent 框架
+langgraph>=1.0.0
+langchain-core>=1.0.0
+langchain-openai>=1.0.0
+
+# 数据模型 / 配置
+pydantic>=2.0.0
+PyYAML>=6.0
+httpx>=0.27.0
+
+# 图像处理
+Pillow>=10.0.0
+opencv-python-headless>=4.9.0
+
+# OCR（按需安装，引擎可插拔）
+# 默认推荐 PaddleOCR（中文效果好）：
+#   paddlepaddle>=3.0.0  paddleocr>=2.8.0
+# Python 3.13+/无法安装 paddle 时使用 RapidOCR 兜底：
+#   rapidocr_onnxruntime>=1.1.0
+
+# CLI 美化
+rich>=13.0.0
+
+# 手机端后端服务
+fastapi>=0.110.0
+uvicorn>=0.29.0
+python-multipart>=0.0.9
+opencv-python-headless>=4.9.0   # 录屏视频抽帧（也可用 opencv-python）

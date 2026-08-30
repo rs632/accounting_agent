@@ -1,0 +1,53 @@
+# ============ 智能记账助手 accounting_agent 配置 ============
+
+# 截图来源: local | auto | adb
+#   local: 显式指定图片路径 (cli 传入 path)
+#   auto : 自动取 screenshots 目录下最新的截图
+#   adb  : 通过 adb 从安卓设备实时截屏
+capture:
+  source: auto
+  screenshots_dir: screenshots
+
+# OCR 引擎: auto | paddle | rapid | mock
+#   auto  : 按顺序探测可用的引擎 (paddle -> rapid -> mock)
+#   paddle: PaddleOCR (中文效果好, 需 Python <=3.12)
+#   rapid : RapidOCR (onnxruntime, 纯 pip 安装, 兼容新版 Python)
+#   mock  : 开发测试用, 读取与图片同名的 .txt 文件
+ocr:
+  engine: auto
+  lang: ch
+  use_gpu: false
+
+# 结构化解析: llm | rule
+#   llm  : 用大模型从 OCR 文本抽取结构化账单 (精度高)
+#   rule : 内置规则/正则解析, 零 API 成本, 离线可用
+parser:
+  mode: llm
+  model: deepseek-v4-flash
+  temperature: 0
+
+# LLM 配置 (mode=llm 时生效)
+# 默认使用 DeepSeek OpenAI 兼容接口；如走其它网关，改 base_url / model / api_key 即可
+# API Key 从 .env 或环境变量 DEEPSEEK_API_KEY 读取（见 .env 文件）
+llm:
+  provider: openai
+  model: deepseek-v4-flash
+  base_url: https://api.deepseek.com/v1
+  api_key: ""
+  api_key_env: DEEPSEEK_API_KEY
+
+# 数据存储
+storage:
+  db_path: data/ledger.db
+  csv_path: data/ledger.csv
+  dedupe_window_days: 7   # 去重窗口: 相同时间+金额+商户视为重复
+  timezone: Asia/Shanghai
+
+# 报告输出
+report:
+  dir: data/reports
+  open_after: true
+
+# 统计与分类
+stats:
+  currency: ¥

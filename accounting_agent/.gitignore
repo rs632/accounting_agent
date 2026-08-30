@@ -1,0 +1,20 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# 运行时数据
+data/
+screenshots/*.png
+screenshots/*.jpg
+screenshots/*.txt
+!scripts/
+
+# 密钥
+.env
+
+# IDE
+.idea/
+.vscode/
