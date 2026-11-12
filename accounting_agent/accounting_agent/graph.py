@@ -7,12 +7,17 @@
 """
 from __future__ import annotations
 
+import sqlite3
+import threading
+from pathlib import Path
+
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.checkpoint.serde.jsonplus import JsonPlusSerializer
+from langgraph.checkpoint.sqlite import SqliteSaver
 from langgraph.graph import END, StateGraph
 from langgraph.types import Command
 
-from accounting_agent.config import thread_config
+from accounting_agent.config import Config, thread_config
 
 from accounting_agent.nodes import (
     ask_more_node,
@@ -28,6 +33,34 @@ from accounting_agent.nodes import (
 from accounting_agent.state import AgentState
 
 DEFAULT_THREAD_ID = "accounting-session"
+
+# 进程内按文件路径缓存 checkpointer（SqliteSaver 自带锁，可跨线程复用）
+_CHECKPOINTERS: dict[str, SqliteSaver] = {}
+_CHECKPOINTERS_LOCK = threading.Lock()
+
+
+def make_serde() -> JsonPlusSerializer:
+    return JsonPlusSerializer(allowed_msgpack_modules=[
+        ("accounting_agent.models", "Transaction"),
+        ("accounting_agent.models", "MonthStats"),
+    ])
+
+
+def make_checkpointer(config: Config) -> SqliteSaver:
+    """按 config.checkpoint_path 构造（并缓存）SQLite checkpointer。
+
+    与内存版不同，会话/中断状态落盘，进程重启后可继续同一 thread。
+    """
+    key = str(Path(config.checkpoint_path).resolve())
+    with _CHECKPOINTERS_LOCK:
+        saver = _CHECKPOINTERS.get(key)
+        if saver is None:
+            Path(key).parent.mkdir(parents=True, exist_ok=True)
+            conn = sqlite3.connect(key, check_same_thread=False)
+            saver = SqliteSaver(conn, serde=make_serde())
+            saver.setup()
+            _CHECKPOINTERS[key] = saver
+        return saver
 
 
 def build_graph(checkpointer=None, entry: str = "capture"):
@@ -64,12 +97,7 @@ def build_graph(checkpointer=None, entry: str = "capture"):
         {"generate_chart": "generate_chart", END: END},
     )
 
-    checkpointer = checkpointer or MemorySaver(
-        serde=JsonPlusSerializer(allowed_msgpack_modules=[
-            ("accounting_agent.models", "Transaction"),
-            ("accounting_agent.models", "MonthStats"),
-        ])
-    )
+    checkpointer = checkpointer or MemorySaver(serde=make_serde())
     return g.compile(checkpointer=checkpointer)
 
 
@@ -80,7 +108,8 @@ def run_pipeline(config, input_path: str = "auto", thread_id: str = DEFAULT_THRE
     视频/录屏场景：先自行抽帧 + OCR，再通过 ocr_text 从 parse 节点进入。
     progress: 可选回调 progress(stage: str)，用于向前端反馈当前阶段。
     """
-    graph = build_graph(entry="ocr" if ocr_text is not None else "capture")
+    graph = build_graph(checkpointer=make_checkpointer(config),
+                        entry="ocr" if ocr_text is not None else "capture")
     thread = thread_config(config, thread_id)
     initial = {"ocr_text": ocr_text} if ocr_text is not None else {"input_path": input_path}
 

@@ -40,6 +40,7 @@ llm:
 storage:
   db_path: data/ledger.db
   csv_path: data/ledger.csv
+  checkpoint_path: data/checkpoints.db   # LangGraph 会话/中断状态持久化(SQLite)
   dedupe_window_days: 7   # 去重窗口: 相同时间+金额+商户视为重复
   timezone: Asia/Shanghai
 

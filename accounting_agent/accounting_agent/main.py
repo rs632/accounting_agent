@@ -13,7 +13,7 @@ from rich.panel import Panel
 from rich.table import Table
 
 from accounting_agent.config import load_config, thread_config
-from accounting_agent.graph import DEFAULT_THREAD_ID, build_graph
+from accounting_agent.graph import DEFAULT_THREAD_ID, build_graph, make_checkpointer
 from accounting_agent.state import AgentState
 
 console = Console()
@@ -143,7 +143,7 @@ def cli(argv: list[str] | None = None) -> None:
     if args.no_llm:
         config._raw.setdefault("parser", {})["mode"] = "rule"
 
-    graph = build_graph()
+    graph = build_graph(checkpointer=make_checkpointer(config))
     try:
         _run(graph, config, args.path, args.thread)
     except Exception as e:  # noqa: BLE001

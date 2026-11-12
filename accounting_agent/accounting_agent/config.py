@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import os
+import sys
 from pathlib import Path
 from typing import Any
 
@@ -73,6 +74,14 @@ class Config:
         return self._resolve(self._raw.get("storage", {}).get("csv_path", "data/ledger.csv"))
 
     @property
+    def checkpoint_path(self) -> str:
+        """LangGraph 会话/中断状态持久化文件；缺省与账本同目录。"""
+        explicit = self._raw.get("storage", {}).get("checkpoint_path")
+        if explicit:
+            return self._resolve(explicit)
+        return str(Path(self.db_path).parent / "checkpoints.db")
+
+    @property
     def dedupe_window_days(self) -> int:
         return int(self._raw.get("storage", {}).get("dedupe_window_days", 7))
 
@@ -102,6 +111,9 @@ def load_config(path: str | Path | None = None, base_dir: Path | None = None) ->
     _load_dotenv(base_dir / ".env")
     with open(path, "r", encoding="utf-8") as f:
         raw = yaml.safe_load(f) or {}
+    if (raw.get("llm") or {}).get("api_key"):
+        print("警告: config.yaml 中检测到明文 llm.api_key，建议改用 .env / 环境变量",
+              file=sys.stderr)
     return Config(raw, base_dir)
 
 

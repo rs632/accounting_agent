@@ -5,10 +5,12 @@
 """
 from __future__ import annotations
 
+from langchain_core.runnables import RunnableConfig
 from langgraph.types import interrupt
 
+from accounting_agent.config import cfg_from_config
+from accounting_agent.parsers.chart_planner import plan_charts
 from accounting_agent.state import AgentState
-from accounting_agent.tools.request_router import classify_request
 
 ASK_MORE_QUESTION = (
     "账本与报告已处理完毕。是否需要追加图表或数据？例如：\n"
@@ -20,14 +22,14 @@ ASK_MORE_QUESTION = (
 )
 
 
-def ask_more_node(state: AgentState) -> dict:
+def ask_more_node(state: AgentState, config: RunnableConfig) -> dict:
     answer = interrupt({
         "type": "ask_more",
         "question": ASK_MORE_QUESTION,
         "accepted": True,
     })
     text = str(answer).strip()
-    keys = classify_request(text)
+    keys = plan_charts(cfg_from_config(config), text)
     if not keys:
         return {"request": text, "pending_charts": []}
     return {"request": text, "pending_charts": keys}

@@ -15,6 +15,7 @@
 """
 from __future__ import annotations
 
+import os
 import shutil
 import tempfile
 import threading
@@ -43,6 +44,23 @@ MAX_UPLOAD_MB = 300  # 视频/图片大小上限
 
 config = load_config()
 config._raw.setdefault("report", {})["open_after"] = False  # 服务模式不弹浏览器
+
+
+def _guard_single_worker() -> None:
+    """任务表/串行锁均为进程内状态，多 worker 会互相不可见，必须单进程运行。"""
+    workers = os.environ.get("WEB_CONCURRENCY") or os.environ.get("UVICORN_WORKERS") or "1"
+    try:
+        count = int(workers)
+    except ValueError:
+        return
+    if count > 1:
+        raise RuntimeError(
+            f"accounting_agent.server 依赖进程内任务状态，请以单进程运行"
+            f"（检测到 workers={count}；请去掉 --workers 或将 workers 设为 1）"
+        )
+
+
+_guard_single_worker()
 
 
 @asynccontextmanager

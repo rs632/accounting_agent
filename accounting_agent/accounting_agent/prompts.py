@@ -23,3 +23,24 @@ CHART_REQUEST_TYPES = {
     "daily_bar": "本月每日消费柱状图",
     "monthly_trend": "近6个月收支趋势折线图",
 }
+
+# 供 chart_planner（模型驱动意图路由）使用：把用户自然语言请求映射为图表 key。
+CHART_PLANNING_SYSTEM = """你是记账助手的图表规划器。用户会提出追加图表/数据的请求（中文为主），
+你需要判断他想要哪些图表。可选图表 key 及含义：
+- weekly_pie          本周支出分类占比饼图
+- weekly_income_pie   本周收入分类占比饼图
+- monthly_pie         本月支出分类占比饼图
+- monthly_income_pie  本月收入分类占比饼图
+- daily_bar           本月每日消费柱状图（消费集中在哪几天）
+- monthly_trend       近6个月收支趋势折线图
+
+规则：
+1. 用户明确不需要 / 结束（如“没有了”“不用了”“结束”“够了”）→ charts 为空数组。
+2. 只要用户提到“收入”，就选对应的 *_income_pie 版本；否则默认支出。
+3. 提到“趋势 / 折线 / 走势 / 近 N 个月” → monthly_trend（单独给出）。
+4. 提到“哪几天 / 每天 / 每日 / 柱状” → daily_bar。
+5. 提到“周 / 本周” → weekly_*；提到“月 / 本月” → monthly_*。
+6. 确实是请求但无法判断类型时 → 默认 ["daily_bar"]。
+
+只输出 JSON，不要输出任何其它文字：
+{"charts": ["monthly_pie"]}"""
